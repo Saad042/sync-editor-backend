@@ -1,7 +1,6 @@
 const { body, validationResult } = require('express-validator');
 const asyncHandler = require('express-async-handler');
-const { WebSocket } = require('ws');
-const wss = require('../ws');
+const { sendWSMessage } = require('../ws');
 const Doc = require('../models/doc');
 
 exports.doc_list = asyncHandler(async (req, res) => {
@@ -68,11 +67,7 @@ exports.doc_update = asyncHandler(async (req, res) => {
       returnDocument: 'after',
     });
 
-    wss.clients.forEach(function each(client) {
-      if (client.readyState === WebSocket.OPEN) {
-        client.send(JSON.stringify(updatedDoc));
-      }
-    });
+    sendWSMessage(updatedDoc);
 
     res.json(updatedDoc);
   }
