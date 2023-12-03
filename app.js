@@ -5,7 +5,7 @@ var logger = require('morgan');
 const cors = require('cors');
 require('dotenv').config();
 
-const createConnection = require('./connection').createConnection;
+const { createConnection } = require('./connection');
 const docRouter = require('./routes/docs');
 
 var app = express();

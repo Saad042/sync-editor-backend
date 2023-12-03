@@ -1,5 +1,7 @@
 const { body, validationResult } = require('express-validator');
 const asyncHandler = require('express-async-handler');
+const { WebSocket } = require('ws');
+const wss = require('../ws');
 const Doc = require('../models/doc');
 
 exports.doc_list = asyncHandler(async (req, res) => {
@@ -19,19 +21,16 @@ exports.doc_validator = [
 exports.doc_create = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
 
-  const { mood, dialogue } = req.body;
-  console.log(req.body);
-  const doc = new Doc({
-    mood,
-    dialogue,
-  });
-
   if (!errors.isEmpty()) {
-    console.log(errors);
     res.status(400);
     res.json(errors);
   } else {
-    console.log(doc);
+    const { mood, dialogue } = req.body;
+    const doc = new Doc({
+      mood,
+      dialogue,
+    });
+
     await doc.save();
     res.status(201);
     res.json(doc);
@@ -53,19 +52,28 @@ exports.doc_detail = asyncHandler(async (req, res, next) => {
 exports.doc_update = asyncHandler(async (req, res) => {
   const errors = validationResult(req);
 
-  const { mood, dialogue } = req.body;
-  const id = req.params.id;
-  const doc = new Doc({
-    _id: id,
-    mood,
-    dialogue,
-  });
-
   if (!errors.isEmpty()) {
     res.status(400);
     res.json(errors);
   } else {
-    const updatedDoc = await Doc.findByIdAndUpdate(id, doc);
+    const { mood, dialogue } = req.body;
+    const id = req.params.id;
+    const doc = new Doc({
+      _id: id,
+      mood,
+      dialogue,
+    });
+
+    const updatedDoc = await Doc.findByIdAndUpdate(id, doc, {
+      returnDocument: 'after',
+    });
+
+    wss.clients.forEach(function each(client) {
+      if (client.readyState === WebSocket.OPEN) {
+        client.send(JSON.stringify(updatedDoc));
+      }
+    });
+
     res.json(updatedDoc);
   }
 });
